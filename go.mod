@@ -1,8 +1,5 @@
-module github.com/OvyFlash/telegram-bot-api
+module github.com/koroff/f11_tg-bot-api
 
-retract (
-    v5.0.0
-    v6.0.0
-)
+go 1.23.4
 
-go 1.23
+require github.com/OvyFlash/telegram-bot-api v0.0.0-20241107191146-851f2334eccf
