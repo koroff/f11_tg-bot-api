@@ -1,3 +1,3 @@
 module github.com/koroff/f11_tg-bot-api
 
-go 1.23.2
+go 1.23.4
