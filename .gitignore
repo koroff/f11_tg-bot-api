@@ -5,3 +5,4 @@ book/
 .vscode/
 CLAUDE.md
 api.json
+.DS_Store
