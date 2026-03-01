@@ -75,15 +75,16 @@ func NewVerifyChat(chat ChatConfig, customDescription string) VerifyChatConfig {
 // verified on behalf of the organization represented by the bot.
 func NewRemoveUserVerification(userID int64) RemoveUserVerificationConfig {
 	return RemoveUserVerificationConfig{
-		UserID:            userID,
+		UserID: userID,
 	}
 }
 
 // NewRemoveChatVerification removes verification from a chat that is currently
-//  verified on behalf of the organization represented by the bot.
+//
+//	verified on behalf of the organization represented by the bot.
 func NewRemoveChatVerification(chat ChatConfig) RemoveChatVerificationConfig {
 	return RemoveChatVerificationConfig{
-		Chat:              chat,
+		Chat: chat,
 	}
 }
 
@@ -1228,6 +1229,29 @@ func NewGetBusinessConnection(id string) GetBusinessConnectionConfig {
 	}
 }
 
+// NewReadBusinessMessage gets business connection request struct
+func NewReadBusinessMessage(chatID int64, messageID int, businessConnectionID string) ReadBusinessMessageConfig {
+	return ReadBusinessMessageConfig{
+		BaseChatMessage: BaseChatMessage{
+			ChatConfig: ChatConfig{
+				ChatID: chatID,
+			},
+			MessageID:            messageID,
+			BusinessConnectionID: BusinessConnectionID(businessConnectionID),
+		},
+	}
+}
+
+// NewDeleteBusinessMessages gets business connection request struct
+func NewDeleteBusinessMessages(messageIDs []int, businessConnectionID string) DeleteBusinessMessagesConfig {
+	return DeleteBusinessMessagesConfig{
+		BaseChatMessages: BaseChatMessages{
+			MessageIDs:           messageIDs,
+			BusinessConnectionID: BusinessConnectionID(businessConnectionID),
+		},
+	}
+}
+
 // NewGetMyCommandsWithScope allows you to set the registered commands for a
 // given scope.
 func NewGetMyCommandsWithScope(scope BotCommandScope) GetMyCommandsConfig {
@@ -1355,5 +1379,108 @@ func NewEditForumTopicConfig(chatID, threadID int64, topicName string) EditForum
 			MessageThreadID: int(threadID),
 		},
 		Name: topicName,
+	}
+}
+
+// NewInputProfilePhotoStatic creates static profile photo input.
+func NewInputProfilePhotoStatic(photo RequestFileData) InputProfilePhotoStatic {
+	return InputProfilePhotoStatic{
+		Type:  "static",
+		Photo: photo,
+	}
+}
+
+// NewInputProfilePhotoAnimated creates animated profile photo input.
+func NewInputProfilePhotoAnimated(animation RequestFileData) InputProfilePhotoAnimated {
+	return InputProfilePhotoAnimated{
+		Type:      "animated",
+		Animation: animation,
+	}
+}
+
+// NewInputStoryContentPhoto creates story photo content.
+func NewInputStoryContentPhoto(photo RequestFileData) InputStoryContentPhoto {
+	return InputStoryContentPhoto{
+		Type:  "photo",
+		Photo: photo,
+	}
+}
+
+// NewInputStoryContentVideo creates story video content.
+func NewInputStoryContentVideo(video RequestFileData) InputStoryContentVideo {
+	return InputStoryContentVideo{
+		Type:  "video",
+		Video: video,
+	}
+}
+
+// NewInputChecklistTask creates checklist task input.
+func NewInputChecklistTask(id int, text string) InputChecklistTask {
+	return InputChecklistTask{
+		ID:   id,
+		Text: text,
+	}
+}
+
+// NewInputChecklist creates checklist input.
+func NewInputChecklist(title string, tasks ...InputChecklistTask) InputChecklist {
+	return InputChecklist{
+		Title: title,
+		Tasks: tasks,
+	}
+}
+
+// NewSendChecklist creates send checklist config.
+func NewSendChecklist(chatID int64, checklist InputChecklist) SendChecklistConfig {
+	return SendChecklistConfig{
+		BaseChat: BaseChat{
+			ChatConfig: ChatConfig{ChatID: chatID},
+		},
+		Checklist: checklist,
+	}
+}
+
+// NewEditMessageChecklist creates edit checklist config.
+func NewEditMessageChecklist(chatID int64, messageID int, checklist InputChecklist) EditMessageChecklistConfig {
+	return EditMessageChecklistConfig{
+		BaseChatMessage: BaseChatMessage{
+			ChatConfig: ChatConfig{ChatID: chatID},
+			MessageID:  messageID,
+		},
+		Checklist: checklist,
+	}
+}
+
+// NewSetMyProfilePhoto creates bot profile photo config.
+func NewSetMyProfilePhoto(photo InputProfilePhoto) SetMyProfilePhotoConfig {
+	return SetMyProfilePhotoConfig{
+		Photo: photo,
+	}
+}
+
+// NewSetBusinessAccountProfilePhoto creates business account profile photo config.
+func NewSetBusinessAccountProfilePhoto(businessConnectionID string, photo InputProfilePhoto) SetBusinessAccountProfilePhotoConfig {
+	return SetBusinessAccountProfilePhotoConfig{
+		BusinessConnectionID: BusinessConnectionID(businessConnectionID),
+		Photo:                photo,
+	}
+}
+
+// NewPostStory creates post story config.
+func NewPostStory(businessConnectionID string, content InputStoryContent, activePeriod int) PostStoryConfig {
+	return PostStoryConfig{
+		BusinessConnectionID: BusinessConnectionID(businessConnectionID),
+		Content:              content,
+		ActivePeriod:         activePeriod,
+	}
+}
+
+// NewRepostStory creates repost story config.
+func NewRepostStory(businessConnectionID string, fromChatID int64, fromStoryID int, activePeriod int) RepostStoryConfig {
+	return RepostStoryConfig{
+		BusinessConnectionID: BusinessConnectionID(businessConnectionID),
+		FromChatID:           fromChatID,
+		FromStoryID:          fromStoryID,
+		ActivePeriod:         activePeriod,
 	}
 }
