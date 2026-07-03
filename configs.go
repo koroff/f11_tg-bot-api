@@ -749,6 +749,8 @@ type VideoConfig struct {
 	BaseSpoiler
 	Thumb                 RequestFileData
 	Duration              int
+	Width                 int
+	Height                int
 	Cover                 RequestFileData
 	StartTimestamp        int64
 	Caption               string
@@ -765,6 +767,8 @@ func (config VideoConfig) params() (Params, error) {
 	}
 
 	params.AddNonZero("duration", config.Duration)
+	params.AddNonZero("width", config.Width)
+	params.AddNonZero("height", config.Height)
 	params.AddNonZero64("start_timestamp", config.StartTimestamp)
 	params.AddNonEmpty("caption", config.Caption)
 	params.AddNonEmpty("parse_mode", config.ParseMode)
@@ -801,6 +805,8 @@ type AnimationConfig struct {
 	BaseFile
 	BaseSpoiler
 	Duration              int
+	Width                 int
+	Height                int
 	Thumb                 RequestFileData
 	Caption               string
 	ParseMode             string
@@ -815,6 +821,8 @@ func (config AnimationConfig) params() (Params, error) {
 	}
 
 	params.AddNonZero("duration", config.Duration)
+	params.AddNonZero("width", config.Width)
+	params.AddNonZero("height", config.Height)
 	params.AddNonEmpty("caption", config.Caption)
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	params.AddBool("show_caption_above_media", config.ShowCaptionAboveMedia)
