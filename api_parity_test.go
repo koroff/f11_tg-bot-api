@@ -24,6 +24,7 @@ type parityDoc struct {
 
 type parityMethod struct {
 	Parameters []parityParameter `json:"parameters"`
+	Fields     []parityParameter `json:"fields"`
 }
 
 type parityParameter struct {
@@ -40,6 +41,13 @@ type parityField struct {
 
 type parityTypeDecl struct {
 	Expr ast.Expr
+}
+
+func (method parityMethod) parameterFields() []parityParameter {
+	if len(method.Parameters) > 0 {
+		return method.Parameters
+	}
+	return method.Fields
 }
 
 func TestAPIParityMethods(t *testing.T) {
@@ -218,7 +226,7 @@ func TestAPIParityMethodParameters(t *testing.T) {
 		}
 
 		expected := make(map[string]struct{})
-		for _, parameter := range method.Parameters {
+		for _, parameter := range method.parameterFields() {
 			expected[parameter.Name] = struct{}{}
 			if _, exists := implemented[parameter.Name]; !exists {
 				missingParams[methodName] = append(missingParams[methodName], parameter.Name)
@@ -527,7 +535,7 @@ func unusedAllowedMethodParams(allowed map[string]map[string]string, index *pack
 			continue
 		}
 		expected := make(map[string]struct{})
-		for _, parameter := range doc.Methods[methodName].Parameters {
+		for _, parameter := range doc.Methods[methodName].parameterFields() {
 			expected[parameter.Name] = struct{}{}
 		}
 		for param := range params {
