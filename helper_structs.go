@@ -53,7 +53,7 @@ func (chat *BaseChat) params() (Params, error) {
 	if err != nil {
 		return params, err
 	}
-	err = params.AddInterface("reply_parameters", chat.ReplyParameters)
+	err = params.AddInterfaceNonZero("reply_parameters", chat.ReplyParameters)
 	if err != nil {
 		return params, err
 	}

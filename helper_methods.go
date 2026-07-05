@@ -1562,6 +1562,17 @@ func NewPaidMedia(chatID, starCount int64, media *InputPaidMedia) PaidMediaConfi
 	}
 }
 
+// NewPaidMediaGroup creates a new PaidMediaConfig with one or more paid media items.
+func NewPaidMediaGroup(chatID, starCount int64, media ...InputPaidMedia) PaidMediaConfig {
+	return PaidMediaConfig{
+		BaseChat: BaseChat{
+			ChatConfig: ChatConfig{ChatID: chatID},
+		},
+		StarCount:  starCount,
+		MediaItems: media,
+	}
+}
+
 // NewInputPaidMediaPhoto creates a new InputPaidMedia for photos.
 func NewInputPaidMediaPhoto(media *InputMediaPhoto) InputPaidMedia {
 	return InputPaidMedia{

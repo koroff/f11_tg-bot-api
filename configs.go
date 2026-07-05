@@ -324,7 +324,7 @@ func (config MessageConfig) params() (Params, error) {
 	if err != nil {
 		return params, err
 	}
-	err = params.AddInterface("link_preview_options", config.LinkPreviewOptions)
+	err = params.AddInterfaceNonZero("link_preview_options", config.LinkPreviewOptions)
 
 	return params, err
 }
@@ -357,11 +357,12 @@ func (config SendChecklistConfig) params() (Params, error) {
 // SendMessageDraftConfig allows you to send a draft message.
 type SendMessageDraftConfig struct {
 	ChatConfig
-	MessageThreadID int
-	DraftID         int
-	Text            string
-	ParseMode       string
-	Entities        []MessageEntity
+	MessageThreadID     int
+	DraftID             int
+	Text                string
+	ThinkingPlaceholder bool
+	ParseMode           string
+	Entities            []MessageEntity
 }
 
 func (config SendMessageDraftConfig) method() string {
@@ -376,7 +377,11 @@ func (config SendMessageDraftConfig) params() (Params, error) {
 
 	params.AddNonZero("message_thread_id", config.MessageThreadID)
 	params.AddNonZero("draft_id", config.DraftID)
-	params.AddNonEmpty("text", config.Text)
+	if config.ThinkingPlaceholder {
+		params["text"] = ""
+	} else {
+		params.AddNonEmpty("text", config.Text)
+	}
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	err = params.AddInterface("entities", config.Entities)
 
@@ -884,6 +889,7 @@ type PaidMediaConfig struct {
 	BaseChat
 	StarCount             int64
 	Media                 *InputPaidMedia
+	MediaItems            []InputPaidMedia
 	Payload               string
 	Caption               string          // optional
 	ParseMode             string          // optional
@@ -903,9 +909,9 @@ func (config PaidMediaConfig) params() (Params, error) {
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	params.AddBool("show_caption_above_media", config.ShowCaptionAboveMedia)
 
-	media := []InputMedia{config.Media}
+	media := config.inputPaidMedia()
 	newMedia := prepareInputMediaForParams(media)
-	err = params.AddInterface("media", newMedia[0])
+	err = params.AddInterface("media", newMedia)
 	if err != nil {
 		return params, err
 	}
@@ -914,15 +920,30 @@ func (config PaidMediaConfig) params() (Params, error) {
 }
 
 func (config PaidMediaConfig) files() []RequestFile {
-	if config.Media == nil {
+	media := config.inputPaidMedia()
+	if len(media) == 0 {
 		return nil
 	}
 
-	return prepareInputMediaForFiles([]InputMedia{config.Media})
+	return prepareInputMediaForFiles(media)
 }
 
 func (config PaidMediaConfig) method() string {
 	return "sendPaidMedia"
+}
+
+func (config PaidMediaConfig) inputPaidMedia() []InputMedia {
+	if len(config.MediaItems) > 0 {
+		media := make([]InputMedia, 0, len(config.MediaItems))
+		for idx := range config.MediaItems {
+			media = append(media, &config.MediaItems[idx])
+		}
+		return media
+	}
+	if config.Media != nil {
+		return []InputMedia{config.Media}
+	}
+	return nil
 }
 
 // VoiceConfig contains information about a SendVoice request.
@@ -1330,7 +1351,7 @@ func (config EditMessageTextConfig) params() (Params, error) {
 			return params, err
 		}
 	}
-	err = params.AddInterface("link_preview_options", config.LinkPreviewOptions)
+	err = params.AddInterfaceNonZero("link_preview_options", config.LinkPreviewOptions)
 
 	return params, err
 }
@@ -1626,6 +1647,7 @@ func (config UserPersonalChatMessagesConfig) params() (Params, error) {
 type SetUserEmojiStatusConfig struct {
 	UserID                    int64 // required
 	EmojiStatusCustomEmojiID  string
+	RemoveStatus              bool
 	EmojiStatusExpirationDate int64
 }
 
@@ -1637,7 +1659,11 @@ func (config SetUserEmojiStatusConfig) params() (Params, error) {
 	params := make(Params)
 
 	params.AddNonZero64("user_id", config.UserID)
-	params.AddNonEmpty("emoji_status_custom_emoji_id", config.EmojiStatusCustomEmojiID)
+	if config.RemoveStatus {
+		params["emoji_status_custom_emoji_id"] = ""
+	} else {
+		params.AddNonEmpty("emoji_status_custom_emoji_id", config.EmojiStatusCustomEmojiID)
+	}
 	params.AddNonZero64("emoji_status_expiration_date", config.EmojiStatusExpirationDate)
 
 	return params, nil
@@ -2622,7 +2648,7 @@ func (config ShippingConfig) params() (Params, error) {
 	params := make(Params)
 
 	params["shipping_query_id"] = config.ShippingQueryID
-	params.AddBool("ok", config.OK)
+	params.AddBoolValue("ok", config.OK)
 	err := params.AddInterface("shipping_options", config.ShippingOptions)
 	params.AddNonEmpty("error_message", config.ErrorMessage)
 
@@ -2644,7 +2670,7 @@ func (config PreCheckoutConfig) params() (Params, error) {
 	params := make(Params)
 
 	params["pre_checkout_query_id"] = config.PreCheckoutQueryID
-	params.AddBool("ok", config.OK)
+	params.AddBoolValue("ok", config.OK)
 	params.AddNonEmpty("error_message", config.ErrorMessage)
 
 	return params, nil
@@ -2772,7 +2798,7 @@ func (config EditUserStarSubscriptionConfig) params() (Params, error) {
 
 	params["telegram_payment_charge_id"] = config.TelegramPaymentChargeID
 	params.AddNonZero64("user_id", config.UserID)
-	params.AddBool("is_canceled", config.IsCanceled)
+	params.AddBoolValue("is_canceled", config.IsCanceled)
 
 	return params, nil
 }
@@ -3338,17 +3364,13 @@ func (config NewStickerSetConfig) params() (Params, error) {
 
 	params.AddBool("needs_repainting", config.NeedsRepainting)
 	params.AddNonEmpty("sticker_type", string(config.StickerType))
-	err := params.AddInterface("stickers", config.Stickers)
+	err := params.AddInterface("stickers", prepareInputStickersForParams(config.Stickers))
 
 	return params, err
 }
 
 func (config NewStickerSetConfig) files() []RequestFile {
-	requestFiles := []RequestFile{}
-	for _, v := range config.Stickers {
-		requestFiles = append(requestFiles, v.Sticker)
-	}
-	return requestFiles
+	return prepareInputStickersForFiles(config.Stickers)
 }
 
 // AddStickerConfig allows you to add a sticker to a set.
@@ -3367,12 +3389,12 @@ func (config AddStickerConfig) params() (Params, error) {
 
 	params.AddNonZero64("user_id", config.UserID)
 	params["name"] = config.Name
-	err := params.AddInterface("sticker", config.Sticker)
+	err := params.AddInterface("sticker", prepareInputStickerForParams(config.Sticker, "sticker"))
 	return params, err
 }
 
 func (config AddStickerConfig) files() []RequestFile {
-	return []RequestFile{config.Sticker.Sticker}
+	return prepareInputStickerForFiles(config.Sticker, "sticker")
 }
 
 // SetStickerPositionConfig allows you to change the position of a sticker in a set.
@@ -3398,6 +3420,7 @@ func (config SetStickerPositionConfig) params() (Params, error) {
 type SetCustomEmojiStickerSetThumbnailConfig struct {
 	Name          string
 	CustomEmojiID string
+	DropThumbnail bool
 }
 
 func (config SetCustomEmojiStickerSetThumbnailConfig) method() string {
@@ -3408,7 +3431,11 @@ func (config SetCustomEmojiStickerSetThumbnailConfig) params() (Params, error) {
 	params := make(Params)
 
 	params["name"] = config.Name
-	params.AddNonEmpty("custom_emoji_id", config.CustomEmojiID)
+	if config.DropThumbnail {
+		params["custom_emoji_id"] = ""
+	} else {
+		params.AddNonEmpty("custom_emoji_id", config.CustomEmojiID)
+	}
 
 	return params, nil
 }
@@ -3488,9 +3515,13 @@ func (config ReplaceStickerInSetConfig) params() (Params, error) {
 	params["name"] = config.Name
 	params["old_sticker"] = config.OldSticker
 
-	err := params.AddInterface("sticker", config.Sticker)
+	err := params.AddInterface("sticker", prepareInputStickerForParams(config.Sticker, "sticker"))
 
 	return params, err
+}
+
+func (config ReplaceStickerInSetConfig) files() []RequestFile {
+	return prepareInputStickerForFiles(config.Sticker, "sticker")
 }
 
 // SetStickerEmojiListConfig allows you to change the list of emoji assigned to a regular or custom emoji sticker. The sticker must belong to a sticker set created by the bot
@@ -3671,6 +3702,7 @@ type EditForumTopicConfig struct {
 	BaseForum
 	Name              string
 	IconCustomEmojiID string
+	RemoveIcon        bool
 }
 
 func (config EditForumTopicConfig) method() string {
@@ -3683,7 +3715,11 @@ func (config EditForumTopicConfig) params() (Params, error) {
 		return params, err
 	}
 	params.AddNonEmpty("name", config.Name)
-	params.AddNonEmpty("icon_custom_emoji_id", config.IconCustomEmojiID)
+	if config.RemoveIcon {
+		params["icon_custom_emoji_id"] = ""
+	} else {
+		params.AddNonEmpty("icon_custom_emoji_id", config.IconCustomEmojiID)
+	}
 
 	return params, nil
 }
@@ -3947,7 +3983,7 @@ func (config GetBusinessConnectionConfig) params() (Params, error) {
 func (config BusinessConnectionID) params() (Params, error) {
 	params := make(Params)
 
-	params["business_connection_id"] = string(config)
+	params.AddNonEmpty("business_connection_id", string(config))
 
 	return params, nil
 }
@@ -4323,6 +4359,7 @@ func (config DeleteMyCommandsConfig) params() (Params, error) {
 // SetMyNameConfig change the bot's name
 type SetMyNameConfig struct {
 	Name         string
+	RemoveName   bool
 	LanguageCode string
 }
 
@@ -4333,7 +4370,11 @@ func (config SetMyNameConfig) method() string {
 func (config SetMyNameConfig) params() (Params, error) {
 	params := make(Params)
 
-	params.AddNonEmpty("name", config.Name)
+	if config.RemoveName {
+		params["name"] = ""
+	} else {
+		params.AddNonEmpty("name", config.Name)
+	}
 	params.AddNonEmpty("language_code", config.LanguageCode)
 
 	return params, nil
@@ -4408,7 +4449,8 @@ func (config GetMyDescriptionConfig) params() (Params, error) {
 // SetMyDescroptionConfig sets the bot's description, which is shown in the chat with the bot if the chat is empty
 type SetMyDescriptionConfig struct {
 	// Pass an empty string to remove the dedicated description for the given language.
-	Description string
+	Description       string
+	RemoveDescription bool
 	// If empty, the description will be applied to all users for whose language there is no dedicated description.
 	LanguageCode string
 }
@@ -4420,7 +4462,11 @@ func (config SetMyDescriptionConfig) method() string {
 func (config SetMyDescriptionConfig) params() (Params, error) {
 	params := make(Params)
 
-	params.AddNonEmpty("description", config.Description)
+	if config.RemoveDescription {
+		params["description"] = ""
+	} else {
+		params.AddNonEmpty("description", config.Description)
+	}
 	params.AddNonEmpty("language_code", config.LanguageCode)
 
 	return params, nil
@@ -4448,7 +4494,8 @@ type SetMyShortDescriptionConfig struct {
 	// New short description for the bot; 0-120 characters.
 	//
 	//Pass an empty string to remove the dedicated short description for the given language.
-	ShortDescription string
+	ShortDescription       string
+	RemoveShortDescription bool
 	//A two-letter ISO 639-1 language code.
 	//
 	//If empty, the short description will be applied to all users for whose language there is no dedicated short description.
@@ -4462,7 +4509,11 @@ func (config SetMyShortDescriptionConfig) method() string {
 func (config SetMyShortDescriptionConfig) params() (Params, error) {
 	params := make(Params)
 
-	params.AddNonEmpty("short_description", config.ShortDescription)
+	if config.RemoveShortDescription {
+		params["short_description"] = ""
+	} else {
+		params.AddNonEmpty("short_description", config.ShortDescription)
+	}
 	params.AddNonEmpty("language_code", config.LanguageCode)
 
 	return params, nil
@@ -4605,6 +4656,37 @@ func prepareInputStoryContentForFiles(content InputStoryContent) []RequestFile {
 	return plan.Files()
 }
 
+func prepareInputStickersForParams(stickers []InputSticker) []InputSticker {
+	prepared := make([]InputSticker, len(stickers))
+	for idx := range stickers {
+		prepared[idx] = prepareInputStickerForParams(stickers[idx], fmt.Sprintf("sticker-%d", idx))
+	}
+	return prepared
+}
+
+func prepareInputStickerForParams(sticker InputSticker, name string) InputSticker {
+	if sticker.Sticker.Data != nil && sticker.Sticker.Data.NeedsUpload() && sticker.Sticker.Name == "" {
+		sticker.Sticker.Name = name
+	}
+	return sticker
+}
+
+func prepareInputStickersForFiles(stickers []InputSticker) []RequestFile {
+	files := make([]RequestFile, 0, len(stickers))
+	for idx := range stickers {
+		files = append(files, prepareInputStickerForFiles(stickers[idx], fmt.Sprintf("sticker-%d", idx))...)
+	}
+	return files
+}
+
+func prepareInputStickerForFiles(sticker InputSticker, name string) []RequestFile {
+	prepared := prepareInputStickerForParams(sticker, name)
+	if prepared.Sticker.Data == nil || !prepared.Sticker.Data.NeedsUpload() {
+		return nil
+	}
+	return []RequestFile{prepared.Sticker}
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
@@ -4693,6 +4775,8 @@ func cloneInputMedia(media InputMedia) InputMedia {
 		clone := &PaidMediaConfig{
 			BaseChat:              m.BaseChat,
 			StarCount:             m.StarCount,
+			MediaItems:            append([]InputPaidMedia(nil), m.MediaItems...),
+			Payload:               m.Payload,
 			Caption:               m.Caption,
 			ParseMode:             m.ParseMode,
 			CaptionEntities:       m.CaptionEntities,
