@@ -146,6 +146,50 @@ func TestSendLivePhotoConfigUploadSerialization(t *testing.T) {
 	}
 }
 
+func TestVideoAndAnimationConfigDimensionParams(t *testing.T) {
+	tests := []struct {
+		name           string
+		params         func() (Params, error)
+		expectedWidth  string
+		expectedHeight string
+	}{
+		{
+			name: "video",
+			params: func() (Params, error) {
+				config := NewVideo(1, FileID("video-file-id"))
+				config.Width = 1920
+				config.Height = 1080
+				return config.params()
+			},
+			expectedWidth:  "1920",
+			expectedHeight: "1080",
+		},
+		{
+			name: "animation",
+			params: func() (Params, error) {
+				config := NewAnimation(1, FileID("animation-file-id"))
+				config.Width = 640
+				config.Height = 360
+				return config.params()
+			},
+			expectedWidth:  "640",
+			expectedHeight: "360",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params, err := tt.params()
+			if err != nil {
+				t.Fatalf("params failed: %v", err)
+			}
+			if params["width"] != tt.expectedWidth || params["height"] != tt.expectedHeight {
+				t.Fatalf("dimension params mismatch: %#v", params)
+			}
+		})
+	}
+}
+
 func TestSendPollConfigBotAPI10MediaSerialization(t *testing.T) {
 	optionMedia := &InputMediaSticker{
 		Type:  "sticker",
