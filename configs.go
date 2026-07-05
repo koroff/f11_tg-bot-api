@@ -318,7 +318,7 @@ func (config MessageConfig) params() (Params, error) {
 		return params, err
 	}
 
-	params.AddNonEmpty("text", config.Text)
+	params["text"] = config.Text
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	err = params.AddInterface("entities", config.Entities)
 	if err != nil {
@@ -376,7 +376,7 @@ func (config SendMessageDraftConfig) params() (Params, error) {
 
 	params.AddNonZero("message_thread_id", config.MessageThreadID)
 	params.AddNonZero("draft_id", config.DraftID)
-	params["text"] = config.Text
+	params.AddNonEmpty("text", config.Text)
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	err = params.AddInterface("entities", config.Entities)
 
@@ -884,6 +884,7 @@ type PaidMediaConfig struct {
 	BaseChat
 	StarCount             int64
 	Media                 *InputPaidMedia
+	Payload               string
 	Caption               string          // optional
 	ParseMode             string          // optional
 	CaptionEntities       []MessageEntity // optional
@@ -897,6 +898,7 @@ func (config PaidMediaConfig) params() (Params, error) {
 	}
 
 	params.AddNonZero64("star_count", config.StarCount)
+	params.AddNonEmpty("payload", config.Payload)
 	params.AddNonEmpty("caption", config.Caption)
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	params.AddBool("show_caption_above_media", config.ShowCaptionAboveMedia)
@@ -1307,6 +1309,7 @@ type EditMessageTextConfig struct {
 	ParseMode          string
 	Entities           []MessageEntity
 	LinkPreviewOptions LinkPreviewOptions
+	RichMessage        InputRichMessage
 }
 
 func (config EditMessageTextConfig) params() (Params, error) {
@@ -1315,11 +1318,17 @@ func (config EditMessageTextConfig) params() (Params, error) {
 		return params, err
 	}
 
-	params["text"] = config.Text
+	params.AddNonEmpty("text", config.Text)
 	params.AddNonEmpty("parse_mode", config.ParseMode)
 	err = params.AddInterface("entities", config.Entities)
 	if err != nil {
 		return params, err
+	}
+	if config.RichMessage != (InputRichMessage{}) {
+		err = params.AddInterface("rich_message", config.RichMessage)
+		if err != nil {
+			return params, err
+		}
 	}
 	err = params.AddInterface("link_preview_options", config.LinkPreviewOptions)
 
@@ -3303,7 +3312,7 @@ func (config UploadStickerConfig) params() (Params, error) {
 }
 
 func (config UploadStickerConfig) files() []RequestFile {
-	return []RequestFile{config.Sticker}
+	return requestFiles(RequestFile{Name: "sticker", Data: config.Sticker.Data})
 }
 
 // NewStickerSetConfig allows creating a new sticker set.
@@ -3399,7 +3408,7 @@ func (config SetCustomEmojiStickerSetThumbnailConfig) params() (Params, error) {
 	params := make(Params)
 
 	params["name"] = config.Name
-	params.AddNonEmpty("position", config.CustomEmojiID)
+	params.AddNonEmpty("custom_emoji_id", config.CustomEmojiID)
 
 	return params, nil
 }
@@ -3536,7 +3545,7 @@ func (config SetStickerMaskPositionConfig) params() (Params, error) {
 	params := make(Params)
 
 	params["sticker"] = config.Sticker
-	err := params.AddInterface("keywords", config.MaskPosition)
+	err := params.AddInterface("mask_position", config.MaskPosition)
 
 	return params, err
 }

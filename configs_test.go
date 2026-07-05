@@ -1462,6 +1462,75 @@ func TestAPIParityRegressionFixes(t *testing.T) {
 	if got := (ChatMemberCountConfig{}).method(); got != "getChatMemberCount" {
 		t.Fatalf("expected getChatMemberCount method, got %q", got)
 	}
+
+	editText := EditMessageTextConfig{
+		BaseEdit: BaseEdit{
+			BaseChatMessage: BaseChatMessage{
+				ChatConfig: ChatConfig{ChatID: 1},
+				MessageID:  2,
+			},
+		},
+		RichMessage: NewInputRichMessageMarkdown("**updated**"),
+	}
+	params, err = editText.params()
+	if err != nil {
+		t.Fatalf("editMessageText params error: %v", err)
+	}
+	if !strings.Contains(params["rich_message"], `"markdown":"**updated**"`) {
+		t.Fatalf("expected rich_message param, got %#v", params)
+	}
+	if _, ok := params["text"]; ok {
+		t.Fatalf("unexpected empty text param with rich_message: %#v", params)
+	}
+
+	paidPhotoMedia := NewInputMediaPhoto(FileID("paid-photo-id"))
+	paid := NewInputPaidMediaPhoto(&paidPhotoMedia)
+	paidMedia := NewPaidMedia(1, 10, &paid)
+	paidMedia.Payload = "paid-payload"
+	params, err = paidMedia.params()
+	if err != nil {
+		t.Fatalf("sendPaidMedia params error: %v", err)
+	}
+	if params["payload"] != "paid-payload" {
+		t.Fatalf("expected payload param, got %#v", params)
+	}
+
+	customEmojiThumbnail := NewCustomEmojiStickerSetThumbnal("emoji_set", "custom-emoji-id")
+	params, err = customEmojiThumbnail.params()
+	if err != nil {
+		t.Fatalf("setCustomEmojiStickerSetThumbnail params error: %v", err)
+	}
+	if params["custom_emoji_id"] != "custom-emoji-id" {
+		t.Fatalf("expected custom_emoji_id param, got %#v", params)
+	}
+	if _, ok := params["position"]; ok {
+		t.Fatalf("unexpected position param in custom emoji thumbnail params")
+	}
+
+	maskPosition := SetStickerMaskPositionConfig{
+		Sticker:      "sticker-file-id",
+		MaskPosition: &MaskPosition{Point: "forehead", XShift: 0.1, YShift: 0.2, Scale: 1.3},
+	}
+	params, err = maskPosition.params()
+	if err != nil {
+		t.Fatalf("setStickerMaskPosition params error: %v", err)
+	}
+	if !strings.Contains(params["mask_position"], `"point":"forehead"`) {
+		t.Fatalf("expected mask_position param, got %#v", params)
+	}
+	if _, ok := params["keywords"]; ok {
+		t.Fatalf("unexpected keywords param in sticker mask position params")
+	}
+
+	uploadSticker := UploadStickerConfig{
+		UserID:        42,
+		Sticker:       RequestFile{Name: "custom-name", Data: FileBytes{Name: "sticker.webp", Bytes: []byte("sticker")}},
+		StickerFormat: "static",
+	}
+	files := uploadSticker.files()
+	if len(files) != 1 || files[0].Name != "sticker" {
+		t.Fatalf("expected uploadStickerFile sticker file field, got %+v", files)
+	}
 }
 
 func TestMediaGroupConfig(t *testing.T) {
