@@ -5014,6 +5014,32 @@ type InputSticker struct {
 	Keywords []string `json:"keywords"`
 }
 
+func (sticker InputSticker) MarshalJSON() ([]byte, error) {
+	out := map[string]any{
+		"format":     sticker.Format,
+		"emoji_list": sticker.EmojiList,
+	}
+	if sticker.Sticker.Data != nil {
+		if sticker.Sticker.Data.NeedsUpload() {
+			name := sticker.Sticker.Name
+			if name == "" {
+				name = "sticker"
+			}
+			out["sticker"] = "attach://" + name
+		} else {
+			out["sticker"] = sticker.Sticker.Data.SendData()
+		}
+	}
+	if sticker.MaskPosition != nil {
+		out["mask_position"] = sticker.MaskPosition
+	}
+	if sticker.Keywords != nil {
+		out["keywords"] = sticker.Keywords
+	}
+
+	return json.Marshal(out)
+}
+
 // Game represents a game. Use BotFather to create and edit games, their short
 // names will act as unique identifiers.
 type Game struct {

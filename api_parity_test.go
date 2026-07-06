@@ -621,7 +621,7 @@ func (index *packageIndex) collectCallParam(receiverType string, call *ast.CallE
 	}
 
 	switch selector.Sel.Name {
-	case "AddNonEmpty", "AddNonZero", "AddNonZero64", "AddNonZeroFloat", "AddBool", "AddBoolPtr", "AddInterface", "AddFirstValid", "paramsWithKey":
+	case "AddNonEmpty", "AddNonZero", "AddNonZero64", "AddNonZeroFloat", "AddBool", "AddBoolValue", "AddBoolPtr", "AddInterface", "AddInterfaceNonZero", "AddFirstValid", "paramsWithKey":
 		if key, ok := firstStringArg(call); ok {
 			params[key] = struct{}{}
 		}
